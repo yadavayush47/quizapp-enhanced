@@ -11,8 +11,8 @@ st.write("Upload your notes, and I'll create a practice quiz for you!")
 
 # --- 2. GEMINI API SETUP ---
 # Replace the text below with your actual API Key from Google AI Studio
-API_KEY = "AIzaSyAZJ6E32KU4VcvkaR0Bcw7puelAZ8aS__c" 
-genai.configure(api_key="AIzaSyAZJ6E32KU4VcvkaR0Bcw7puelAZ8aS__c")
+API_KEY = st.secrets["GEMINI_API_KEY"] 
+genai.configure(API_KEY = st.secrets["GEMINI_API_KEY"]")
 model = genai.GenerativeModel('gemini-2.5-flash')
 
 # --- 3. THE "MEMORY" (SESSION STATE) ---
