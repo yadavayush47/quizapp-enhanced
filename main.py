@@ -13,7 +13,7 @@ st.write("Upload your notes, and I'll create a practice quiz for you!")
 # Replace the text below with your actual API Key from Google AI Studio
 API_KEY = st.secrets["GEMINI_API_KEY"] 
 genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-model = genai.GenerativeModel('gemini-1.5-flash')
+model = genai.GenerativeModel('gemini-1.5-pro')
 
 # --- 3. THE "MEMORY" (SESSION STATE) ---
 # This tells the app not to forget the quiz when you click a button
