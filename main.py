@@ -66,3 +66,25 @@ if st.session_state.quiz_data:
                 st.success("Correct!")
             else:
                 st.error(f"Wrong. Answer: {item['answer']}")
+# --- 8. DOWNLOAD BUTTON (NEW) ---
+if st.session_state.quiz_data:
+    st.write("---")
+    
+    # 1. Create the text content for the file
+    quiz_text = "📝 AI GENERATED QUIZ REPORT\n"
+    quiz_text += "="*30 + "\n\n"
+    
+    for i, item in enumerate(st.session_state.quiz_data):
+        quiz_text += f"Q{i+1}: {item['question']}\n"
+        for idx, opt in enumerate(item['options']):
+            quiz_text += f"   {chr(65+idx)}) {opt}\n" # Adds A), B), C), D)
+        quiz_text += f"\n✅ Correct Answer: {item['answer']}\n"
+        quiz_text += "-"*20 + "\n\n"
+
+    # 2. Add the Download Button
+    st.download_button(
+        label="📥 Download Quiz as Text File",
+        data=quiz_text,
+        file_name="Engineering_Quiz.txt",
+        mime="text/plain"
+    )
