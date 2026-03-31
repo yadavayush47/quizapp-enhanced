@@ -11,9 +11,8 @@ st.write("Upload your notes, and I'll create a practice quiz!")
 
 # --- 2. NEW GEMINI 2026 SETUP ---
 try:
-    # The new SDK uses a Client object
     client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
-    # gemini-2.5-flash is the stable workhorse for 2026
+    # gemini-2.5-flash-lite is great for higher request limits
     MODEL_ID = "gemini-2.5-flash" 
 except Exception as e:
     st.error("Check your Streamlit Secrets for the API Key.")
@@ -35,53 +34,72 @@ with st.sidebar:
 
 # --- 5. GENERATION LOGIC ---
 if generate_button and uploaded_file:
-    with st.spinner("Generating..."):
+    with st.spinner("Analyzing PDF and generating quiz..."):
         try:
             pdf_text = extract_text_from_pdf(uploaded_file)
-            prompt = f"Create {num_q} multiple choice questions from this text. Return ONLY JSON. Text: {pdf_text[:15000]}"
             
-            # The new 2026 method call
+            # Strict prompt to ensure keys match
+            prompt = f"""
+            Based on the text below, create {num_q} multiple choice questions.
+            Return ONLY a JSON list of objects.
+            Each object MUST have exactly these keys: "question", "options", "answer".
+            "options" must be a list of 4 strings.
+            Text: {pdf_text[:15000]}
+            """
+            
             response = client.models.generate_content(
                 model=MODEL_ID,
                 contents=prompt
             )
             
             raw_text = response.text
-            # Simple cleaning for JSON
             if "```json" in raw_text:
                 raw_text = raw_text.split("```json")[1].split("```")[0]
+            elif "```" in raw_text:
+                raw_text = raw_text.split("```")[1].split("```")[0]
             
             st.session_state.quiz_data = json.loads(raw_text.strip())
             st.success("Ready!")
         except Exception as e:
-            st.error(f"Error: {e}")
+            st.error(f"Error during generation: {e}")
 
 # --- 6. DISPLAY ---
 if st.session_state.quiz_data:
     for i, item in enumerate(st.session_state.quiz_data):
-        st.subheader(f"Q{i+1}: {item['question']}")
-        user_choice = st.radio("Choose:", item['options'], key=f"q_{i}")
+        # Use .get() to prevent crashes if a key is missing
+        q_text = item.get('question', 'Question text missing')
+        options = item.get('options', ['A', 'B', 'C', 'D'])
+        correct_ans = item.get('answer', 'Not specified')
+
+        st.subheader(f"Q{i+1}: {q_text}")
+        user_choice = st.radio("Choose:", options, key=f"q_{i}")
+        
         if st.button(f"Check Q{i+1}", key=f"btn_{i}"):
-            if user_choice == item['answer']:
-                st.success("Correct!")
+            if user_choice == correct_ans:
+                st.success("✅ Correct!")
             else:
-                st.error(f"Wrong. Answer: {item['answer']}")
-# --- 8. DOWNLOAD BUTTON (NEW) ---
+                st.error(f"❌ Wrong. Answer: {correct_ans}")
+
+# --- 8. DOWNLOAD BUTTON (SAFE VERSION) ---
 if st.session_state.quiz_data:
     st.write("---")
     
-    # 1. Create the text content for the file
     quiz_text = "📝 AI GENERATED QUIZ REPORT\n"
     quiz_text += "="*30 + "\n\n"
     
     for i, item in enumerate(st.session_state.quiz_data):
-        quiz_text += f"Q{i+1}: {item['question']}\n"
-        for idx, opt in enumerate(item['options']):
-            quiz_text += f"   {chr(65+idx)}) {opt}\n" # Adds A), B), C), D)
-        quiz_text += f"\n✅ Correct Answer: {item['answer']}\n"
+        # Bulletproof data extraction
+        q_text = item.get('question', 'N/A')
+        opts = item.get('options', [])
+        ans = item.get('answer', 'N/A')
+
+        quiz_text += f"Q{i+1}: {q_text}\n"
+        for idx, opt in enumerate(opts):
+            quiz_text += f"   {chr(65+idx)}) {opt}\n"
+        
+        quiz_text += f"\n✅ Correct Answer: {ans}\n"
         quiz_text += "-"*20 + "\n\n"
 
-    # 2. Add the Download Button
     st.download_button(
         label="📥 Download Quiz as Text File",
         data=quiz_text,
